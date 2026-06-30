@@ -1,11 +1,15 @@
-# Pelny pipeline (detekcja + wizualizacja)
+# --- Rdzen pipeline'u ---
 numpy
 Pillow
 scikit-learn
 pyvista
+opencv-python        # CLAHE - normalizacja oswietlenia
 
-# Detekcja twarzy. Wymaga dlib, ktory na Windows potrzebuje
-# CMake + Visual Studio Build Tools (C++).
-# Jesli chcesz tylko wizualizowac gotowe embeddingi z emb/,
-# mozesz pominac te linie i nie instalowac dlib.
-face_recognition
+# --- Backend ArcFace (domyslny) ---
+# Mocniej wazy twarz niz swiatlo. Przy pierwszym uruchomieniu pobiera model (buffalo_l).
+insightface
+onnxruntime          # lub onnxruntime-gpu, jesli masz CUDA (szybsze przy wielu zdjeciach)
+
+# --- Backend dlib (opcjonalny, lzejszy: --backend dlib) ---
+# Wymaga dlib, ktory na Windows potrzebuje CMake + Visual Studio Build Tools (C++).
+# face_recognition
