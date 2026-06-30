@@ -10,7 +10,10 @@ metric-learn         # --metric lmnn (uczenie metryki z etykiet; LDA/NCA sa w sc
 # --- Backend ArcFace (domyslny) ---
 # Mocniej wazy twarz niz swiatlo. Przy pierwszym uruchomieniu pobiera model (buffalo_l).
 insightface
-onnxruntime          # lub onnxruntime-gpu, jesli masz CUDA (szybsze przy wielu zdjeciach)
+# GPU (zalecane przy duzej liczbie zdjec) - wymaga sterownikow CUDA + cuDNN:
+onnxruntime-gpu
+# Bez GPU uzyj zamiast powyzszego:
+# onnxruntime
 
 # --- Backend dlib (opcjonalny, lzejszy: --backend dlib) ---
 # Wymaga dlib, ktory na Windows potrzebuje CMake + Visual Studio Build Tools (C++).

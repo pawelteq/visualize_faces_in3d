@@ -1,8 +1,10 @@
 """
-Filtry jakosci kadrow twarzy.
+Filtry jakosci i przynaleznosci kadrow.
 
-Bardzo male kadry (np. 32x32) daja niewiarygodne embeddingi - lepiej je
-odrzucic, bo psuja zarowno wizualizacje, jak i uczenie metryki.
+- size_mask        : odrzuca zbyt male kadry (np. 32x32 -> niewiarygodne embeddingi).
+- folder_keep_mask : odrzuca twarze z folderow-nie-osob (zwierzeta, nierozpoznane);
+                     opcjonalnie zostawia tylko sklasyfikowane osoby.
+- apply_mask       : filtruje rownolegle names / X / faces.
 """
 from __future__ import annotations
 
@@ -16,10 +18,23 @@ def min_sides(faces) -> np.ndarray:
 
 
 def size_mask(faces, min_size: int) -> np.ndarray:
-    """Maska True/False: ktore kadry sa wystarczajaco duze (>= min_size px)."""
     if min_size <= 0 or len(faces) == 0:
         return np.ones(len(faces), dtype=bool)
     return min_sides(faces) >= min_size
+
+
+def folder_keep_mask(folders, ignore, only_labeled: bool = False) -> np.ndarray:
+    """True = zostaw. Wyrzuca foldery z ignore; gdy only_labeled - takze 'luzem' (None)."""
+    ignore = {str(s).lower() for s in ignore}
+    keep = []
+    for f in folders:
+        if f is not None and f.strip().lower() in ignore:
+            keep.append(False)
+        elif only_labeled and f is None:
+            keep.append(False)
+        else:
+            keep.append(True)
+    return np.array(keep, dtype=bool)
 
 
 def apply_mask(mask, names, X, faces, *extra):

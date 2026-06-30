@@ -41,17 +41,48 @@ i do LDA, ale nie jest potrzebny do samej wizualizacji.
 pip install -r requirements.txt
 ```
 
-Domyslny backend ArcFace wymaga `insightface` + `onnxruntime` (pierwszy run
-pobiera model). Jesli masz GPU, zainstaluj `onnxruntime-gpu` - przy duzej liczbie
-zdjec mocno przyspiesza. Lzejsza alternatywa to `--backend dlib` (wtedy odkomentuj
+Domyslny backend ArcFace wymaga `insightface` + `onnxruntime-gpu` (pierwszy run
+pobiera model). Lzejsza alternatywa to `--backend dlib` (wtedy odkomentuj
 `face_recognition` w requirements; na Windows wymaga CMake + VS Build Tools).
+
+### GPU (duzo zdjec)
+
+ArcFace liczy sie na GPU (CUDA), co przy tysiacach zdjec jest wielokrotnie
+szybsze niz CPU. Potrzebujesz:
+
+- karty NVIDIA + sterownikow CUDA i cuDNN,
+- pakietu `onnxruntime-gpu` (zamiast `onnxruntime`).
+
+Uruchomienie:
+
+```bash
+python src/detect_faces.py --device gpu              # wymus GPU (blad, jesli niedostepne)
+python src/detect_faces.py --device auto             # GPU jesli jest, inaczej CPU
+python src/detect_faces.py --device gpu --det-size 480   # szybciej (mniejsza detekcja)
+```
+
+Skrypt wypisuje, na czym liczy (`ArcFace na: GPU (CUDA)`) oraz tempo
+(`zdj/s`), wiec od razu widac, czy GPU faktycznie pracuje. Sprawdza realnie
+zaladowane providery - jesli CUDA cicho spadnie na CPU, dostaniesz ostrzezenie.
+
+**Czesty blad: `cublasLt64_12.dll missing`** (CUDA cicho spada na CPU).
+Oznacza brak bibliotek CUDA 12. Najprostsza naprawa (skrypt sam je znajdzie):
+
+```bash
+pip install nvidia-cublas-cu12 nvidia-cudnn-cu12 nvidia-cuda-runtime-cu12 nvidia-cufft-cu12
+```
+
+Sprawdz tez, czy `onnxruntime-gpu` pasuje do CUDA 12 (`pip show onnxruntime-gpu`;
+nowsze wersje = CUDA 12 + cuDNN 9). Alternatywa: NVIDIA CUDA Toolkit 12 + cuDNN 9
+zainstalowane systemowo, z `\bin` na PATH.
 
 ## Uzycie
 
 ```bash
 # 1. Detekcja + embeddingi (ArcFace, z normalizacja swiatla)
-python src/detect_faces.py
-python src/detect_faces.py --backend dlib     # lzejszy wariant
+python src/detect_faces.py --device gpu       # GPU (CUDA) - szybko przy wielu zdjeciach
+python src/detect_faces.py --min-score 0.7    # mniej szumow/zwierzat (ostrzejszy prog)
+python src/detect_faces.py --backend dlib --dlib-model cnn   # lzejszy, dokladniejszy detektor
 python src/detect_faces.py --force            # przelicz od nowa
 
 # 2. Wizualizacja 3D (domyslnie: UMAP, twarz > swiatlo, kolor = grupa)
@@ -95,6 +126,24 @@ python src/visualize_3d.py --metric nca  --labels-from-folders
 Metody: `lda` (scikit-learn), `nca` (scikit-learn), `lmnn` (pip install metric-learn).
 `evaluate.py` pokaze, ktora najlepiej dziala na Twoich danych.
 
+## Mniej falszywych twarzy (szumy, zwierzeta)
+
+Detektor podaje pewnosc detekcji - szumy i pyski zwierzat dostaja niski wynik,
+wiec wystarczy odfiltrowac je progiem:
+
+- `--min-score N` (ArcFace) - odrzuca detekcje ponizej pewnosci N. Domyslnie 0.6;
+  podnies do 0.7-0.8, jesli wciaz lapie zwierzeta/szum.
+- `--min-detect-size N` - odrzuca male ramki twarzy (domyslnie 40 px).
+- `--dlib-model cnn` - dokladniejszy detektor dla backendu dlib.
+- pewnosc (`score`) jest zapisywana w `emb/meta.csv`.
+
+Czyszczenie tego, co juz sie wykrylo (na podstawie zapisanej pewnosci):
+
+```bash
+python src/prune.py --min-score 0.7           # podglad: co zostanie usuniete
+python src/prune.py --min-score 0.7 --apply   # faktyczne usuniecie
+```
+
 ## Zaszumiony zbior (zwierzeta, smieci, male kadry, pomylki)
 
 Pipeline jest odporny na realne dane:
@@ -113,6 +162,25 @@ python src/labels_audit.py                                   # raport pomylek
 python src/evaluate.py --min-face-size 64 --drop-suspected   # uczciwszy pomiar
 python src/visualize_3d.py --metric lmnn --labels-from-folders --drop-suspected --explode 3
 ```
+
+## Interaktywna wizualizacja
+
+Zdjecia tej samej osoby ukladaja sie na SIATCE (nie nakladaja sie), a w oknie:
+
+- **kliknij dowolne zdjecie** -> kamera przybliza do calej grupy tej osoby
+  (u gory pojawia sie nazwa osoby i liczba zdjec),
+- **klawisz R** -> reset widoku.
+
+Sterowanie ukladem:
+
+```bash
+python src/visualize_3d.py --metric lmnn --labels-from-folders --only-labeled
+python src/visualize_3d.py --metric lmnn --labels-from-folders --cell 0.8 --explode 3
+```
+
+- `--cell`    odstep zdjec w obrebie grupy (wieksze = luzniejsza siatka),
+- `--explode` odstep miedzy grupami, `--spread` globalna skala,
+- `--no-interactive` wylacza klikanie.
 
 ## Moduly
 
