@@ -4,6 +4,8 @@ Pillow
 scikit-learn
 pyvista
 opencv-python        # CLAHE - normalizacja oswietlenia
+umap-learn           # --reduce UMAP (najlepsze rozdzielanie grup w wizualizacji)
+metric-learn         # --metric lmnn (uczenie metryki z etykiet; LDA/NCA sa w scikit-learn)
 
 # --- Backend ArcFace (domyslny) ---
 # Mocniej wazy twarz niz swiatlo. Przy pierwszym uruchomieniu pobiera model (buffalo_l).

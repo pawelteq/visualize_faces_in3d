@@ -54,14 +54,64 @@ python src/detect_faces.py
 python src/detect_faces.py --backend dlib     # lzejszy wariant
 python src/detect_faces.py --force            # przelicz od nowa
 
-# 2. Wizualizacja 3D (domyslnie: twarz > swiatlo, kolor = grupa)
-python src/visualize_3d.py
-python src/visualize_3d.py --light-strength 0     # surowe embeddingi do porownania
-python src/visualize_3d.py --reduce TSNE          # czesto lepsze skupiska niz PCA
+# 2. Wizualizacja 3D (domyslnie: UMAP, twarz > swiatlo, kolor = grupa)
+python src/visualize_3d.py                          # UMAP + rozpychanie grup
+python src/visualize_3d.py --explode 3 --spread 15  # wieksze odstepy miedzy grupami
+python src/visualize_3d.py --eps 0.25               # wiecej, drobniejszych grup
+python src/visualize_3d.py --reduce TSNE --perplexity 5
+python src/visualize_3d.py --light-strength 0       # surowe embeddingi do porownania
 
 # 3. (opcjonalnie) etykiety grup do kolorowania / LDA
 python src/group_faces.py
 python src/visualize_3d.py --reduce LDA --labels emb/labels_auto.csv --color-by label
+```
+
+## Uczenie metryki z etykiet (najlepsze rozdzielanie osob)
+
+Jesli oznaczysz kto-jest-kim, mozesz NAUCZYC przeksztalcenia, ktore sciaga ta
+sama osobe razem i odpycha rozne osoby - naprawia to przypadki, gdy ta sama
+osoba ladowala daleko, a dwie rozne blisko.
+
+Etykiety nadajesz ukladajac wyciete twarze w podfoldery:
+
+```
+emb_images/
+  Ania/   <base>#twarz#0.jpg ...
+  Marek/  <base>#twarz#1.jpg ...
+```
+
+Potem:
+
+```bash
+# Pomiar PRZED/PO (recall@1 = czy najblizszy sasiad to ta sama osoba; wyzej=lepiej)
+python src/evaluate.py
+
+# Wizualizacja z nauczona metryka (lmnn zwykle najlepszy)
+python src/visualize_3d.py --metric lmnn --labels-from-folders --explode 3
+python src/visualize_3d.py --metric lda  --labels-from-folders
+python src/visualize_3d.py --metric nca  --labels-from-folders
+```
+
+Metody: `lda` (scikit-learn), `nca` (scikit-learn), `lmnn` (pip install metric-learn).
+`evaluate.py` pokaze, ktora najlepiej dziala na Twoich danych.
+
+## Zaszumiony zbior (zwierzeta, smieci, male kadry, pomylki)
+
+Pipeline jest odporny na realne dane:
+
+- **Foldery-nie-osoby** (`nierozpoznane`, `zwierzeta`, `inne`, `unknown`...) sa
+  automatycznie pomijane - nie trafiaja do uczenia metryki ani do oceny.
+  Liste zmienisz przez `--ignore-folders nazwa1 nazwa2`.
+- **Male kadry** (np. 32x32) daja bezuzyteczne embeddingi - odrzuca je
+  `--min-face-size` (domyslnie 50 px; `0` wylacza filtr).
+- **Pomylki w etykietach** - `labels_audit.py` znajduje twarze blizsze innej
+  osobie niz wlasnej i zapisuje raport `emb/suspected_mislabels.csv` do recznego
+  sprawdzenia. Flaga `--drop-suspected` pomija je przy uczeniu metryki.
+
+```bash
+python src/labels_audit.py                                   # raport pomylek
+python src/evaluate.py --min-face-size 64 --drop-suspected   # uczciwszy pomiar
+python src/visualize_3d.py --metric lmnn --labels-from-folders --drop-suspected --explode 3
 ```
 
 ## Moduly
