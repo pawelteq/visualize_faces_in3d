@@ -15,6 +15,12 @@ onnxruntime-gpu
 # Bez GPU uzyj zamiast powyzszego:
 # onnxruntime
 
+# --- Filtr CLIP (opcjonalny: --clip-filter) ---
+# Odrzuca psy/zwierzeta/grafiki, ktore detektor blednie lapie jako twarze.
+# Najlepiej wersja torch z CUDA (https://pytorch.org).
+# open_clip_torch
+# torch
+
 # --- Backend dlib (opcjonalny, lzejszy: --backend dlib) ---
 # Wymaga dlib, ktory na Windows potrzebuje CMake + Visual Studio Build Tools (C++).
 # face_recognition

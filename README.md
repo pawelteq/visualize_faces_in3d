@@ -137,6 +137,79 @@ wiec wystarczy odfiltrowac je progiem:
 - `--dlib-model cnn` - dokladniejszy detektor dla backendu dlib.
 - pewnosc (`score`) jest zapisywana w `emb/meta.csv`.
 
+### Psy i grafiki lapane jako twarze
+
+Detektor jest trenowany na ludzkich twarzach, ale czasem z wysoka pewnoscia
+lapie pyski zwierzat albo twarze z rysunkow/grafik - wtedy sam `--min-score`
+nie pomaga. Wlacz semantyczny filtr CLIP, ktory klasyfikuje kazdy kadr
+("ludzka twarz" vs "pies/zwierze" vs "rysunek/grafika") i odrzuca nie-ludzkie:
+
+```bash
+pip install open_clip_torch torch          # najlepiej wersja CUDA
+python src/detect_faces.py --device gpu --min-score 0.7 --clip-filter
+```
+
+Decyzja jest WZGLEDNA (twarz musi tylko wygrac z "pies/grafika", a nie przebic
+sztywny prog), wiec twarze pod katem / z profilu / slabej jakosci przechodza.
+Czulosc:
+- `--clip-threshold` (domyslnie 0.15) - dolny prog anty-smieci, obniz jesli
+  wycina prawdziwe twarze,
+- `--clip-margin` (domyslnie 0.0) - wymagana przewaga "twarzy"; ustaw UJEMNY
+  (np. -0.03), zeby bylo lagodniej dla trudnych twarzy.
+
+Strojenie jako STRONA (zalecane) - CLIP liczy raz, a Ty suwakami na zywo
+widzisz, ktore kadry zostaja, a ktore wypadaja:
+
+```bash
+python src/clip_export.py --source images --device gpu   # tworzy clip_tuning.html
+```
+
+`--source images` uruchamia detektor na Twoich zdjeciach i pokazuje WSZYSTKIE
+kandydatury - prawdziwe twarze ORAZ falszywe (psy, grafiki) - czyli dokladnie to,
+co filtr ma rozdzielic. (`--source crops` uzywa gotowych twarzy z emb_images.)
+Otworz `clip_tuning.html`, przesuwaj prog i margines (galeria "Wypada" sortowana
+od granicznych - tam wypatrz prawdziwe twarze), a strona pokaze gotowa komende
+detect_faces z Twoimi wartosciami.
+
+Wersja tekstowa (bez przegladarki):
+
+```bash
+python src/clip_tune.py --dir emb_images --clip-threshold 0.14 --clip-margin -0.02
+```
+
+### Auto-kalibracja BEZ etykiet (gdy nic nie posortowane)
+
+Nie masz przykladow "twarz"/"nie-twarz"? CLIP-owa przewaga (human-reject) sama
+uklada sie w dwa skupiska, a granice znajdzie automatycznie Otsu / mieszanka
+gaussowska:
+
+```bash
+python src/clip_auto.py --source images --device gpu
+```
+
+Wypisze automatyczny `--clip-margin`, oceni, czy skupiska sa wyraznie rozdzielone,
+i zbuduje `clip_tuning.html` juz ustawiony na tej granicy (mozesz dostroic suwakiem).
+Potem uzywasz podanej komendy detect_faces.
+
+### Test filtra (auto-strojenie liczbami, z etykietami)
+
+Najszybszy sposob na poprawe: dajesz przyklady "twarz" i "nie-twarz", a skrypt
+sam znajduje najlepszy prog/margines (F1) i pokazuje, co jeszcze MYLI.
+
+```bash
+# TWARZE = foldery osob w emb_images, NIE-TWARZE = nierozpoznane/zwierzeta:
+python src/clip_eval.py --auto --device gpu --html
+
+# albo wlasne foldery z przykladami:
+python src/clip_eval.py --faces-dir eval/face --not-faces-dir eval/junk --html
+```
+
+Wypisze gotowa komende z najlepszymi `--clip-threshold/--clip-margin`, macierz
+pomylek oraz (z `--html`) `clip_eval.html` z dwiema galeriami: SMIECI blednie
+zostawione (dla nich dodaj opisy w `face_filter.py`) i TWARZE blednie odrzucone.
+Iteracja: zobacz pomylki -> dodaj/popraw opisy w `face_filter.py` -> uruchom test
+ponownie i porownaj F1.
+
 Czyszczenie tego, co juz sie wykrylo (na podstawie zapisanej pewnosci):
 
 ```bash
