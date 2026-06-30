@@ -1,0 +1,11 @@
+# Pelny pipeline (detekcja + wizualizacja)
+numpy
+Pillow
+scikit-learn
+pyvista
+
+# Detekcja twarzy. Wymaga dlib, ktory na Windows potrzebuje
+# CMake + Visual Studio Build Tools (C++).
+# Jesli chcesz tylko wizualizowac gotowe embeddingi z emb/,
+# mozesz pominac te linie i nie instalowac dlib.
+face_recognition
